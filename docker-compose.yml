@@ -11,4 +11,62 @@ services:
       POSTGRES_PASSWORD: book_db_password
       POSTGRES_DB: book_service
     volumes:
-      - ./db-data/book_db_server/:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U book_db -d book_service -h localhost" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - my_network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - book_db_server
+    networks:
+      - my_network
+  redis:
+    image: redis:7-alpine
+    command: [ "redis-server", "--save", "", "--appendonly", "no" ]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - my_network
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: ghcr.io/joeferner/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    user: "root"
+    depends_on:
+      - redis
+    networks:
+      - my_network
+
+volumes:
+  db-data:
+  redisdata:
+  pgadmin_data:
+
+networks:
+  my_network:
