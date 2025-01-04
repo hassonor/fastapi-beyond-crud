@@ -3,10 +3,10 @@ from typing import List
 from fastapi import HTTPException, status, APIRouter, Depends
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
+from src.auth.dependencies import AccessTokenBearer
 from src.books.service import BookService
 from src.books.schemas import Book, BookUpdateModel, BookCreateModel
 from src.db.main import get_session
-from src.auth.dependencies import AccessTokenBearer
 
 book_router = APIRouter()
 book_service = BookService()
