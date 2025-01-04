@@ -1,0 +1,14 @@
+services:
+  book_db_server:
+    image: "postgres:14.0"
+    ports:
+      - "6010:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: book_db
+      POSTGRES_PASSWORD: book_db_password
+      POSTGRES_DB: book_service
+    volumes:
+      - ./db-data/book_db_server/:/var/lib/postgresql/data
