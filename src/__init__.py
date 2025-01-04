@@ -8,6 +8,7 @@ from src.db.main import init_db
 @asynccontextmanager
 async def life_span(app: FastAPI):
     print("server is starting...")
+    from src.books.models import Book  # noqa
     await init_db()
     yield
     print("server has been stopped")

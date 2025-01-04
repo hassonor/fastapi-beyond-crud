@@ -2,7 +2,7 @@ services:
   book_db_server:
     image: "postgres:14.0"
     ports:
-      - "6010:5432"
+      - "6009:5432"
     deploy:
       mode: replicated
       replicas: 1
