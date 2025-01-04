@@ -11,7 +11,7 @@ class User(SQLModel, table=True):
         pg.UUID, nullable=False, primary_key=True, default=uuid.uuid4()))
     username: str
     email: str
-    password: str
+    password_hash: str = Field(exclude=True)
     first_name: str
     last_name: str
     is_verified: bool = Field(default=False)

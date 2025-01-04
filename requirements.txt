@@ -1,5 +1,6 @@
 fastapi[standard]~=0.115.6
 alembic~=1.14.0
+passlib~=1.7.4
 asyncpg~=0.30.0
 pydantic~=2.10.4
 pydantic-settings~=2.7.1
