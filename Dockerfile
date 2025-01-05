@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy the application code into /app/src
 COPY src/ /app/src/
+COPY migrations/ /app/migrations/
 # Make sure src/__init__.py has "app = FastAPI()" or similar
 
 # Expose the port your FastAPI app will run on (internal container port)
