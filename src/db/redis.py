@@ -11,7 +11,7 @@ class TokenBlocklistClient:
     A class-based Redis client for managing blocked JTIs (token IDs).
     """
 
-    def __init__(self, expiry: int = 86400):
+    def __init__(self, expiry: int = 3600):
         """
         :param expiry: Time-to-live in seconds for each JTI (default: 1 day).
                       Increase or decrease as needed.
