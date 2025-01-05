@@ -3,7 +3,7 @@ from src.books.routes import book_router
 from src.auth.routes import auth_router
 from src.config import Config
 from contextlib import asynccontextmanager
-from src.db.main import init_db
+from src.db.main import init_db, async_engine
 from src.db.redis import token_blocklist_client
 
 
@@ -14,6 +14,8 @@ async def life_span(app: FastAPI):
     await init_db()
     await token_blocklist_client.connect()
     yield
+    await token_blocklist_client.close()
+    await async_engine.dispose()
     print("server has been stopped")
 
 

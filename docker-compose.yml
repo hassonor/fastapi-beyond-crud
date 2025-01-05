@@ -1,11 +1,25 @@
 services:
+  fastapi_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    # Map container's port 8000 to host's 8007 (example):
+    ports:
+      - "8007:8000"
+    depends_on:
+      - book_db_server
+      - redis
+    env_file:
+      - .env
+    networks:
+      - my_network
+
   book_db_server:
     image: "postgres:14.0"
+    container_name: book_db_server
     ports:
       - "6009:5432"
-    deploy:
-      mode: replicated
-      replicas: 1
     environment:
       POSTGRES_USER: book_db
       POSTGRES_PASSWORD: book_db_password
@@ -22,6 +36,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
+    container_name: pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -33,8 +48,10 @@ services:
       - book_db_server
     networks:
       - my_network
+
   redis:
     image: redis:7-alpine
+    container_name: redis_server
     command: [ "redis-server", "--save", "", "--appendonly", "no" ]
     volumes:
       - redisdata:/data
@@ -49,15 +66,13 @@ services:
       - my_network
 
   redis-commander:
-    container_name: redis-commander
-    hostname: redis-commander
     image: ghcr.io/joeferner/redis-commander:latest
+    container_name: redis-commander
     restart: always
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
       - "8081:8081"
-    user: "root"
     depends_on:
       - redis
     networks:
@@ -70,3 +85,4 @@ volumes:
 
 networks:
   my_network:
+    name: my_network

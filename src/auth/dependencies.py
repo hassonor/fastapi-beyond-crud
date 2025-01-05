@@ -1,4 +1,4 @@
-from fastapi import Request, status
+from fastapi import Request, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.exceptions import HTTPException
 
@@ -57,3 +57,7 @@ class RefreshTokenBearer(TokenBearer):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Please provide a refresh token",
             )
+
+
+def get_current_user(token_details: dict = Depends(AccessTokenBearer())):
+    user_email = token_details['email']
