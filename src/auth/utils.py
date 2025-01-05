@@ -1,4 +1,6 @@
 from datetime import timedelta, datetime, timezone
+from typing import Any
+
 from passlib.context import CryptContext
 import jwt
 import uuid
@@ -31,7 +33,7 @@ def create_access_token(user_data: dict, expiry: timedelta = None, refresh: bool
     return token
 
 
-def decode_token(token: str) -> dict:
+def decode_token(token: str) -> Any | None:
     try:
         token_data = jwt.decode(
             jwt=token,
@@ -40,7 +42,13 @@ def decode_token(token: str) -> dict:
         )
 
         return token_data
+    except jwt.exceptions.DecodeError as e:
+        logging.exception("Invalid token: %s", e)
+        return None
 
+    except jwt.exceptions.ExpiredSignatureError as e:
+        logging.exception("Expired token: %s", e)
+        return None
     except jwt.PyJWT as e:
         logging.exception(e)
         raise None
