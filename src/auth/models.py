@@ -1,14 +1,19 @@
-from sqlmodel import SQLModel, Field, Column
+from typing import List
+from sqlmodel import SQLModel, Field, Column, Relationship
 import sqlalchemy.dialects.postgresql as pg
 from datetime import datetime, timezone
 import uuid
+
+from src.books import models
 
 
 class User(SQLModel, table=True):
     __tablename__ = 'users'
 
-    uid: uuid.UUID = Field(sa_column=Column(
-        pg.UUID, nullable=False, primary_key=True, default=uuid.uuid4()))
+    uid: uuid.UUID = Field(
+        primary_key=True,
+        default_factory=uuid.uuid4
+    )
     username: str
     email: str
     password_hash: str = Field(exclude=True)
@@ -25,6 +30,7 @@ class User(SQLModel, table=True):
             onupdate=lambda: datetime.now(timezone.utc),
         )
     )
+    books: List["models.Book"] = Relationship(back_populates="user", sa_relationship_kwargs={'lazy': 'selectin'})
 
     def __repr__(self):
         return f"<User {self.username}>"
