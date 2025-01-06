@@ -13,7 +13,7 @@ from src.books.models import Book  # noqa
 
 from src.config import Config
 
-database_url = Config.DATABASE_URL
+database_url = Config.DB_HOST_TO_PG
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
