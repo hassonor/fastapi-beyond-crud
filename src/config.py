@@ -7,6 +7,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     DATABASE_URL: str
+    DB_HOST_TO_PG: str
     JWT_SECRET: str
     JWT_ALGORITHM: str
     REDIS_HOST: str = "redis"
