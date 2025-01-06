@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import timedelta, datetime, timezone
 
-from .dependencies import RefreshTokenBearer, AccessTokenBearer
+from .dependencies import RefreshTokenBearer, AccessTokenBearer, get_current_user
 from .schemas import UserCreateModel, UserModel, UserLoginModel
 from .service import UserService
 from .utils import create_access_token, decode_token, verify_password  # noqa
@@ -84,6 +84,11 @@ async def get_refreshed_token(token_details: dict = Depends(RefreshTokenBearer()
         })
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+
+
+@auth_router.get('/current-user')
+async def get_current_user(user=Depends(get_current_user)):
+    return user
 
 
 @auth_router.get('/logout')
