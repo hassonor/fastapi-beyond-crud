@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from src.auth.dependencies import AccessTokenBearer, RoleChecker
 from src.books.service import BookService
-from src.books.schemas import Book, BookUpdateModel, BookCreateModel
+from .schemas import Book, BookUpdateModel, BookCreateModel, BookDetailModel
 from src.db.main import get_session
 
 book_router = APIRouter()
@@ -31,7 +31,7 @@ async def get_user_book_submissions(
     return books
 
 
-@book_router.get('/{book_uid}', response_model=Book, dependencies=[role_checker])
+@book_router.get('/{book_uid}', response_model=BookDetailModel, dependencies=[role_checker])
 async def get_book(book_uid: str, session: AsyncSession = Depends(get_session),
                    token_details=Depends(access_token_bearer)) -> dict:
     book = await book_service.get_book_by_id(book_uid, session)

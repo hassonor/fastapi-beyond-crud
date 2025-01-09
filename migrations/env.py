@@ -10,6 +10,7 @@ from sqlmodel import SQLModel
 
 from src.db.models import User  # noqa
 from src.db.models import Book  # noqa
+from src.db.models import Review  # noqa
 
 from src.config import Config
 
