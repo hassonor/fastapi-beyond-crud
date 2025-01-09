@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, timedelta
 from faker import Faker
-from src.books.models import Book
+from src.db.models import Book
 
 fake = Faker()
 

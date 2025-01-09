@@ -1,5 +1,5 @@
 import uuid
-from src.auth.models import User
+from src.db.models import User
 
 
 def test_user_model_repr():

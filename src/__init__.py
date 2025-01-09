@@ -10,7 +10,7 @@ from src.db.redis import token_blocklist_client
 @asynccontextmanager
 async def life_span(app: FastAPI):
     print("server is starting...")
-    from src.books.models import Book  # noqa
+    from src.db.models import Book  # noqa
     await init_db()
     await token_blocklist_client.connect()
     yield

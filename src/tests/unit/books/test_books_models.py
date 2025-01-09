@@ -1,6 +1,6 @@
 import uuid
 from datetime import date
-from src.books.models import Book
+from src.db.models import Book
 
 
 def test_book_model_repr():
