@@ -5,7 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import timedelta, datetime, timezone
 
 from .dependencies import RefreshTokenBearer, AccessTokenBearer, get_current_user, RoleChecker
-from .schemas import UserCreateModel, UserModel, UserLoginModel
+from .schemas import UserCreateModel, UserModel, UserLoginModel, UserBooksModel
 from .service import UserService
 from .utils import create_access_token, decode_token, verify_password  # noqa
 from src.db.main import get_session
@@ -88,7 +88,7 @@ async def get_refreshed_token(token_details: dict = Depends(RefreshTokenBearer()
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
 
 
-@auth_router.get('/current-user', response_model=UserModel)
+@auth_router.get('/current-user', response_model=UserBooksModel)
 async def get_current_user(user=Depends(get_current_user), _: bool = Depends(role_checker)):
     return user
 
