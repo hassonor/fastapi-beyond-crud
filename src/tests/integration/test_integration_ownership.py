@@ -1,10 +1,11 @@
+# File: src/tests/integration/test_integration_ownership.py
+
 import pytest
 import httpx
 
 
 @pytest.mark.anyio
 async def test_book_ownership(async_client: httpx.AsyncClient):
-    """If your app doesn't enforce ownership, we'll pass if 404 or normal codes."""
     r1 = await async_client.post("/auth/signup", json={
         "first_name": "Owner",
         "last_name": "One",
@@ -64,26 +65,34 @@ async def test_book_ownership(async_client: httpx.AsyncClient):
         return
 
     intruder_headers = {"Authorization": f"Bearer {intruder_token}"}
-    patch_resp = await async_client.patch(f"/books/{book_data.get('uid', 'fake')}", headers=intruder_headers, json={
-        "title": "Malicious Update",
-        "author": "EvilGuy",
-        "publisher": "FakePub",
-        "page_count": 999,
-        "language": "EN"
-    })
+    patch_resp = await async_client.patch(
+        f"/books/{book_data.get('uid', 'fake')}", headers=intruder_headers, json={
+            "title": "Malicious Update",
+            "author": "EvilGuy",
+            "publisher": "FakePub",
+            "page_count": 999,
+            "language": "EN"
+        }
+    )
     assert patch_resp.status_code in [401, 403, 200, 404]
 
-    patch_owner = await async_client.patch(f"/books/{book_data.get('uid', 'fake')}", headers=owner_headers, json={
-        "title": "Updated by Owner",
-        "author": "Owner",
-        "publisher": "OwnerPub",
-        "page_count": 300,
-        "language": "EN"
-    })
+    patch_owner = await async_client.patch(
+        f"/books/{book_data.get('uid', 'fake')}", headers=owner_headers, json={
+            "title": "Updated by Owner",
+            "author": "Owner",
+            "publisher": "OwnerPub",
+            "page_count": 300,
+            "language": "EN"
+        }
+    )
     assert patch_owner.status_code in [200, 404, 403]
 
-    intruder_del = await async_client.delete(f"/books/{book_data.get('uid', 'fake')}", headers=intruder_headers)
+    intruder_del = await async_client.delete(
+        f"/books/{book_data.get('uid', 'fake')}", headers=intruder_headers
+    )
     assert intruder_del.status_code in [401, 403, 404]
 
-    owner_del = await async_client.delete(f"/books/{book_data.get('uid', 'fake')}", headers=owner_headers)
+    owner_del = await async_client.delete(
+        f"/books/{book_data.get('uid', 'fake')}", headers=owner_headers
+    )
     assert owner_del.status_code in [204, 200, 404]

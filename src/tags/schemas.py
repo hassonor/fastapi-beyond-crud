@@ -16,4 +16,4 @@ class TagCreateModel(BaseModel):
 
 
 class TagAddModel(BaseModel):
-    tags: List[TagCreateModel]
+    tags: List[TagCreateModel] = []

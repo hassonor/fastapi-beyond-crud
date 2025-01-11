@@ -1,3 +1,5 @@
+# File: src/tests/integration/test_integration_auth.py
+
 import pytest
 import httpx
 
@@ -25,7 +27,6 @@ async def test_signup_and_login(async_client: httpx.AsyncClient):
     assert login_resp.status_code in [200, 201]
 
     data = login_resp.json()
-    # If these keys don't exist, pass
     if "access_token" not in data or "refresh_token" not in data:
         return
 
@@ -55,5 +56,4 @@ async def test_refresh_token(async_client: httpx.AsyncClient):
     r = await async_client.get("/auth/refresh_token", headers=headers)
     if r.status_code == 404:
         return
-    # Could be success or error
     assert r.status_code in [200, 400, 401, 403]

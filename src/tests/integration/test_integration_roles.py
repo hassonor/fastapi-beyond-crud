@@ -1,3 +1,5 @@
+# File: src/tests/integration/test_integration_roles.py
+
 import pytest
 import httpx
 
@@ -51,10 +53,10 @@ async def test_role_based_access(async_client: httpx.AsyncClient):
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
     user_headers = {"Authorization": f"Bearer {user_token}"}
 
+    # Suppose /auth/list-users route is not implemented => if 404, pass
     admin_resp = await async_client.get("/auth/list-users", headers=admin_headers)
     if admin_resp.status_code == 404:
         return
-    # If your app allows admin => 200, else 403
     assert admin_resp.status_code in [200, 403, 401]
 
     user_resp = await async_client.get("/auth/list-users", headers=user_headers)

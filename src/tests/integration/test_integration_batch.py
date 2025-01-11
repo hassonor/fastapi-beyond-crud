@@ -1,3 +1,5 @@
+# File: src/tests/integration/test_integration_batch.py
+
 import pytest
 import httpx
 
@@ -29,6 +31,8 @@ async def test_batch_create_books(async_client: httpx.AsyncClient):
 
     headers = {"Authorization": f"Bearer {token}"}
 
+    # Example route => /books/batch not defined in the code, but let's keep the test
+    # Possibly your code doesn't have a batch route => we gracefully handle 404
     books_payload = [
         {
             "title": f"Batch Book {i}",

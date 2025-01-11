@@ -32,7 +32,7 @@ class TagService:
     ):
         """Add tags to a book"""
 
-        book = await book_service.get_book(book_uid=book_uid, session=session)
+        book = await book_service.get_book_by_id(book_uid=book_uid, session=session)
 
         if not book:
             raise BookNotFound()
