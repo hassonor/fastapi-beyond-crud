@@ -1,7 +1,6 @@
 from typing import List, Any
-from fastapi import Request, status, Depends
+from fastapi import Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.exceptions import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.models import User
@@ -25,10 +24,7 @@ class TokenBearer(HTTPBearer):
         token_data = decode_token(token)
 
         if not self.token_valid(token):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={
-                "error": "This token is invalid or expired",
-                "resolution": "Please get new token"
-            })
+            raise InvalidToken()
 
         if await token_blocklist_client.token_in_blocklist(token_data['jti']):
             raise InvalidToken()
