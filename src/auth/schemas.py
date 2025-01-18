@@ -35,3 +35,7 @@ class UserBooksModel(UserModel):
 class UserLoginModel(BaseModel):
     email: str = Field(max_length=45)
     password: str = Field(min_length=7)
+
+
+class EmailModel(BaseModel):
+    addresses: List[str]

@@ -55,6 +55,7 @@ shared_volume/
 # Translations
 *.mo
 *.pot
+merged_project.py
 
 # Django stuff:
 *.log
