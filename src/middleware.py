@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.requests import Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import time
 import logging
 
@@ -23,3 +25,16 @@ def register_middleware(app: FastAPI):
         print(message)
 
         return response
+
+    app.add_middleware(
+        CORSMiddleware,  # type: ignore
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_credentials=True
+    )
+
+    app.add_middleware(
+        TrustedHostMiddleware,  # type: ignore
+        allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0"],
+    )
