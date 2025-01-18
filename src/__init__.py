@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from src.db.main import init_db, async_engine
 from src.db.redis import token_blocklist_client
 from .errors import register_all_errors
+from .middleware import register_middleware
 
 
 @asynccontextmanager
@@ -30,6 +31,8 @@ app = FastAPI(
 )
 
 register_all_errors(app)
+
+register_middleware(app)
 
 
 @app.exception_handler(500)
