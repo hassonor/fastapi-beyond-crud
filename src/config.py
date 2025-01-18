@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
+    DOMAIN: str
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
     MAIL_FROM: str

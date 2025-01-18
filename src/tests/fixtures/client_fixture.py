@@ -1,17 +1,18 @@
 # File: src/tests/fixtures/client_fixture.py
 
-import pytest
+import pytest_asyncio
 import httpx
 from httpx import ASGITransport
-from src import app  # your main FastAPI instance
+
+from src import app  # The main FastAPI instance
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_client():
     """
-    Replaces httpx.AsyncClient(app=app, base_url=...)
-    with the recommended transport=ASGITransport(app=...).
-    Eliminates the "The 'app' shortcut is now deprecated" DeprecationWarning.
+    Provides an httpx.AsyncClient that is properly opened and closed,
+    with an ASGITransport pointing to our FastAPI app,
+    and a base_url of "http://testserver".
     """
     transport = ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
