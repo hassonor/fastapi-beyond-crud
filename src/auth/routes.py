@@ -156,3 +156,10 @@ async def revoke_token(token_details: dict = Depends(AccessTokenBearer())):
         },
         status_code=status.HTTP_200_OK
     )
+
+
+"""
+1. PROVIDE THE EMAIL -> password reset request
+2. SEND PASSWORD RESET LINK
+3. RESET PASSWORD -> password reset confirm
+"""

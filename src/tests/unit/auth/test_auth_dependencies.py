@@ -8,6 +8,7 @@ from src.errors import (
     AccessTokenRequired,
     RefreshTokenRequired,
     InsufficientPermission,
+    AccountNotVerified
 )
 
 
@@ -34,7 +35,7 @@ async def test_access_token_bearer_valid(mock_block):
 async def test_access_token_bearer_rejects_refresh(mock_block):
     """
     If token is a REFRESH token (refresh=True) but AccessTokenBearer is used,
-    your code raises AccessTokenRequired (a custom exception).
+    it should raise AccessTokenRequired.
     """
     mock_block.return_value = False
     bearer = AccessTokenBearer()
@@ -42,7 +43,6 @@ async def test_access_token_bearer_rejects_refresh(mock_block):
     req = AsyncMock()
     req.headers = {"Authorization": f"Bearer {token}"}
 
-    # Expect AccessTokenRequired, not HTTPException
     with pytest.raises(AccessTokenRequired):
         await bearer.__call__(req)
 
@@ -70,7 +70,7 @@ async def test_refresh_token_bearer_valid(mock_block):
 async def test_refresh_token_bearer_rejects_access(mock_block):
     """
     If token is an ACCESS token (refresh=False) but RefreshTokenBearer is used,
-    your code raises RefreshTokenRequired (a custom exception).
+    it should raise RefreshTokenRequired.
     """
     mock_block.return_value = False
     bearer = RefreshTokenBearer()
@@ -78,26 +78,37 @@ async def test_refresh_token_bearer_rejects_access(mock_block):
     req = AsyncMock()
     req.headers = {"Authorization": f"Bearer {token}"}
 
-    # Expect RefreshTokenRequired, not HTTPException
     with pytest.raises(RefreshTokenRequired):
         await bearer.__call__(req)
 
 
 def test_role_checker_allows():
     """
-    If user's role is in the allowed list, no exception is raised (returns True).
+    If user's role is in the allowed list, RoleChecker returns True without exceptions.
     """
     checker = RoleChecker(["admin", "user"])
-    mock_user = type("User", (), {"role": "user"})()
+    mock_user = type("User", (), {"role": "user", "is_verified": True})()
     assert checker(mock_user) is True
 
 
 def test_role_checker_denies():
     """
-    If user's role is NOT in the allowed list, your code raises InsufficientPermission
-    (a custom exception).
+    If user's role is NOT in the allowed list, RoleChecker raises InsufficientPermission.
     """
     checker = RoleChecker(["admin"])
-    mock_user = type("User", (), {"role": "user"})()
+    mock_user = type("User", (), {"role": "user", "is_verified": True})()
     with pytest.raises(InsufficientPermission):
+        checker(mock_user)
+
+
+def test_role_checker_unverified_raises():
+    """
+    If user's account is not verified (is_verified=False),
+    RoleChecker should raise AccountNotVerified.
+    """
+    checker = RoleChecker(["admin", "user"])
+    # User has correct role but is not verified
+    mock_user = type("User", (), {"role": "user", "is_verified": False})()
+
+    with pytest.raises(AccountNotVerified):
         checker(mock_user)
