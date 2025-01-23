@@ -43,3 +43,8 @@ class EmailModel(BaseModel):
 
 class PasswordResetRequestModel(BaseModel):
     email: str
+
+
+class PasswordResetConfirmModel(BaseModel):
+    new_password: str
+    confirmed_new_password: str
