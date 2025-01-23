@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import timedelta, datetime, timezone
@@ -36,7 +36,8 @@ async def send_mail(emails: EmailModel):
 
 
 @auth_router.post('/signup', status_code=status.HTTP_201_CREATED)
-async def create_user_account(user_data: UserCreateModel, session: AsyncSession = Depends(get_session)):
+async def create_user_account(user_data: UserCreateModel, bg_tasks: BackgroundTasks,
+                              session: AsyncSession = Depends(get_session)):
     email = user_data.email
     user_exists = await user_service.user_exists(email, session)
     if user_exists:
@@ -53,7 +54,8 @@ async def create_user_account(user_data: UserCreateModel, session: AsyncSession 
         <p>Please click the <a href="{link}">link</a> below to verify your email</p>
         """
         message = create_message(recipients=[email], subject="Verify your email", body=html_message)
-        await mail.send_message(message)
+
+        bg_tasks.add_task(mail.send_message, message)
 
         return {"message": "Account Created! Check email to verify your account", "user": new_user}
 
@@ -202,7 +204,7 @@ async def reset_account_password(token: str, passwords: PasswordResetConfirmMode
             content={"message": "Error occurred during password reset"},
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-    
+
     user_email = token_data.get("email")
 
     if user_email:
