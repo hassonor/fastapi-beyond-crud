@@ -1,4 +1,4 @@
-# File: src/tests/integration/test_integration_auth.py
+# src/tests/integration/test_integration_auth.py
 
 import pytest
 import uuid
@@ -10,26 +10,27 @@ from src.auth.utils import generate_passwd_hash, create_url_safe_token
 
 
 @pytest.fixture
-def patch_async_to_sync():
+def patch_send_email_task():
     """
-    Patches 'src.celery_tasks.async_to_sync' so it won't raise
-    "You cannot use AsyncToSync in the same thread as an async event loop."
-    This effectively no-ops the actual async call during tests.
+    Patch send_email_task.delay(...) so that it directly calls the *mocked* mail.send_message(...)
+    rather than running via from_thread or async_to_sync.
+    This cleanly avoids "This function can only be run from an AnyIO worker thread" errors.
     """
-    with patch('src.celery_tasks.async_to_sync') as mock_asynctosync:
-        # Replace the returned function with a dummy async function that does nothing.
-        def side_effect(_coro):
-            async def dummy(*args, **kwargs):
-                return True
+    from src.mail import mail, create_message
 
-            return dummy
+    def inline_run(recipients, subject, body):
+        # Build the message
+        msg = create_message(recipients, subject, body)
+        # Because 'mail' is globally patched by mock_mail, calling mail.send_message
+        # will mark mock_mail.send_message.called = True with no event-loop issues.
+        mail.send_message(msg)
 
-        mock_asynctosync.side_effect = side_effect
-        yield
+    with patch("src.auth.routes.send_email_task.delay", side_effect=inline_run) as mock_send:
+        yield mock_send
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("patch_async_to_sync")  # <-- Added patch here
+@pytest.mark.usefixtures("patch_send_email_task")
 async def test_create_user_account(override_get_session, async_client, mock_mail):
     """Test user creation and email verification"""
     unique_id = uuid.uuid4().hex[:5]
@@ -46,6 +47,7 @@ async def test_create_user_account(override_get_session, async_client, mock_mail
     data = response.json()
     assert "message" in data
     assert "user" in data
+    # Confirm mail.send_message was actually called
     assert mock_mail.send_message.called
 
 
@@ -130,12 +132,12 @@ async def test_logout(override_get_session, async_client, db_session):
     assert logout_response.status_code == 200
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------
 #   Password Reset Tests
-# ---------------------------------------------------------------------------
+# ------------------------------------------
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("patch_async_to_sync")  # <-- Added patch here
+@pytest.mark.usefixtures("patch_send_email_task")
 async def test_password_reset_request_flow(
         override_get_session, async_client, db_session, mock_mail
 ):
@@ -158,6 +160,7 @@ async def test_password_reset_request_flow(
     assert resp.status_code == 200
     data = resp.json()
     assert data["message"] == "Please check your email for instructions to reset your password"
+    # Confirm mail.send_message was actually called
     assert mock_mail.send_message.called
 
     last_call = mock_mail.send_message.call_args
@@ -172,7 +175,7 @@ async def test_password_reset_request_flow(
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("patch_async_to_sync")  # <-- Added patch here
+@pytest.mark.usefixtures("patch_send_email_task")
 async def test_password_reset_confirm_success(
         override_get_session, async_client, db_session, mock_mail
 ):
@@ -189,6 +192,7 @@ async def test_password_reset_confirm_success(
     db_session.add(user)
     await db_session.commit()
 
+    # Step 1: request password reset
     await async_client.post(
         "/api/v1/auth/password-reset-request",
         json={"email": email}
@@ -201,6 +205,7 @@ async def test_password_reset_confirm_success(
     assert match is not None
     token_in_email = match.group(1)
 
+    # Step 2: confirm reset
     payload = {
         "new_password": "NewSecret123",
         "confirmed_new_password": "NewSecret123"
@@ -241,7 +246,7 @@ async def test_password_reset_confirm_mismatch_fake_token(
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("patch_async_to_sync")  # <-- Added patch here
+@pytest.mark.usefixtures("patch_send_email_task")
 async def test_password_reset_confirm_mismatch_real_token(
         override_get_session, async_client, db_session, mock_mail
 ):
@@ -262,6 +267,7 @@ async def test_password_reset_confirm_mismatch_real_token(
         json={"email": email}
     )
     assert r.status_code == 200
+    # Ensure email was triggered
     assert mock_mail.send_message.called
 
     last_call = mock_mail.send_message.call_args
@@ -283,13 +289,13 @@ async def test_password_reset_confirm_mismatch_real_token(
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("patch_async_to_sync")  # <-- Added patch here
+@pytest.mark.usefixtures("patch_send_email_task")
 async def test_password_reset_confirm_user_not_found(
         override_get_session, async_client, mock_mail
 ):
     """
     If decode_url_safe_token fails *and* there's no mismatch,
-    THEN we get 500.
+    THEN we get 500. But here, if user not found => 404.
     """
     email = "doesnotexist@example.com"
     await async_client.post(
