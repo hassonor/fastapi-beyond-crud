@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: myapp:latest
     container_name: fastapi_app
     # Map container's port 8000 to host's 8007 (example):
     ports:
@@ -16,15 +17,29 @@ services:
       - my_network
 
   celery_worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: myapp:latest
     container_name: celery_worker
     command: >
       celery -A src.celery_tasks.c_app worker --loglevel=info
     depends_on:
       - redis
       - book_db_server
+    env_file:
+      - .env
+    networks:
+      - my_network
+
+  flower:
+    image: myapp:latest
+    container_name: celery_flower
+    command: >
+      celery -A src.celery_tasks.c_app --broker=${REDIS_URL} flower
+        --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - celery_worker
+      - redis
     env_file:
       - .env
     networks:

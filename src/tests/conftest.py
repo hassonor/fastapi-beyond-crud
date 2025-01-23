@@ -1,4 +1,5 @@
 # src/tests/conftest.py
+
 import os
 import pytest
 import pytest_asyncio
@@ -13,19 +14,16 @@ from src import app
 from .mocks.redis_mock import AsyncRedisMock
 from src.db.redis import token_blocklist_client
 
-# Force SQLite for testing
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"  # Force SQLite for tests
 
 
 @pytest.fixture(scope="session")
 def test_db_url():
-    """Provide test database URL"""
     return "sqlite+aiosqlite:///:memory:"
 
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine(test_db_url):
-    """Create test database engine"""
     engine = create_engine(test_db_url, echo=False, future=True)
     async_engine = AsyncEngine(engine)
     async with async_engine.begin() as conn:
@@ -36,7 +34,6 @@ async def test_engine(test_db_url):
 
 @pytest_asyncio.fixture
 async def db_session(test_engine):
-    """Provide database session"""
     async_session = async_sessionmaker(
         bind=test_engine,
         class_=AsyncSession,
@@ -48,7 +45,6 @@ async def db_session(test_engine):
 
 @pytest.fixture
 def override_get_session(db_session):
-    """Override FastAPI dependency"""
     from src.db.main import get_session
     def _override():
         yield db_session
@@ -60,9 +56,8 @@ def override_get_session(db_session):
 
 @pytest.fixture(autouse=True)
 def mock_redis():
-    """Mock Redis globally"""
+    """Mock Redis globally."""
     redis_mock = AsyncRedisMock()
-    # Mock both the redis client and the token blocklist
     with patch('src.db.redis.token_blocklist_client.redis', redis_mock), \
             patch('redis.asyncio.Redis', return_value=redis_mock), \
             patch('src.db.redis.redis.Redis', return_value=redis_mock):
@@ -72,7 +67,7 @@ def mock_redis():
 
 @pytest.fixture(autouse=True)
 def mock_mail():
-    """Mock email functionality globally"""
+    """Mock email functionality globally."""
     mail_mock = AsyncMock()
     mail_mock.send_message = AsyncMock(return_value=True)
     with patch('src.mail.mail', mail_mock), \
@@ -80,9 +75,25 @@ def mock_mail():
         yield mail_mock
 
 
+@pytest.fixture(autouse=True)
+def run_celery_inline():
+    """
+    Patch Celery so that calling `send_email_task.delay(...)` actually runs
+    `send_email_task.run(...)` inline, letting `mail.send_message(...)` happen.
+    """
+    from src.celery_tasks import send_email_task
+
+    def inline_run(*args, **kwargs):
+        # This directly calls the Celery task's `run()` method,
+        # so the body of the task is executed in the test.
+        return send_email_task.run(*args, **kwargs)
+
+    with patch('src.auth.routes.send_email_task.delay', side_effect=inline_run) as mock_task:
+        yield mock_task
+
+
 @pytest_asyncio.fixture
 async def async_client():
-    """Provide async HTTP client"""
     transport = ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client
