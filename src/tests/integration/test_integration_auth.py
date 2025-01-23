@@ -3,26 +3,28 @@
 import pytest
 import uuid
 import re
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from src.db.models import User
 from src.auth.utils import generate_passwd_hash, create_url_safe_token
 
 
 @pytest.fixture
-def patch_send_email_task():
+def patch_send_email_task(mock_mail):
     """
-    Patch send_email_task.delay(...) so that it directly calls the *mocked* mail.send_message(...)
-    rather than running via from_thread or async_to_sync.
-    This cleanly avoids "This function can only be run from an AnyIO worker thread" errors.
+    Patches send_email_task.delay(...) so it calls `mail.send_message(...)` in a SYNC manner.
+    Also overrides the default `mock_mail.send_message` (AsyncMock) with MagicMock so
+    we don't get "never awaited" warnings.
     """
     from src.mail import mail, create_message
 
+    # Replace mock_mail.send_message with a normal MagicMock to avoid "never awaited" warnings
+    mock_mail.send_message = MagicMock()
+
     def inline_run(recipients, subject, body):
-        # Build the message
+        # Build a message object
         msg = create_message(recipients, subject, body)
-        # Because 'mail' is globally patched by mock_mail, calling mail.send_message
-        # will mark mock_mail.send_message.called = True with no event-loop issues.
+        # Call our newly synchronous mock
         mail.send_message(msg)
 
     with patch("src.auth.routes.send_email_task.delay", side_effect=inline_run) as mock_send:
@@ -47,7 +49,8 @@ async def test_create_user_account(override_get_session, async_client, mock_mail
     data = response.json()
     assert "message" in data
     assert "user" in data
-    # Confirm mail.send_message was actually called
+
+    # Check that mail.send_message was called
     assert mock_mail.send_message.called
 
 
@@ -124,17 +127,16 @@ async def test_logout(override_get_session, async_client, db_session):
     )
     assert login_response.status_code in [200, 201]
     data = login_response.json()
-    access_token = data.get("access_token")
-    assert access_token is not None
+    assert "access_token" in data
 
-    headers = {"Authorization": f"Bearer {access_token}"}
+    headers = {"Authorization": f"Bearer {data['access_token']}"}
     logout_response = await async_client.get("/api/v1/auth/logout", headers=headers)
     assert logout_response.status_code == 200
 
 
-# ------------------------------------------
-#   Password Reset Tests
-# ------------------------------------------
+# -----------------------------
+# Password Reset Tests
+# -----------------------------
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("patch_send_email_task")
@@ -160,7 +162,7 @@ async def test_password_reset_request_flow(
     assert resp.status_code == 200
     data = resp.json()
     assert data["message"] == "Please check your email for instructions to reset your password"
-    # Confirm mail.send_message was actually called
+    # Ensure mail.send_message was called
     assert mock_mail.send_message.called
 
     last_call = mock_mail.send_message.call_args
@@ -192,11 +194,8 @@ async def test_password_reset_confirm_success(
     db_session.add(user)
     await db_session.commit()
 
-    # Step 1: request password reset
-    await async_client.post(
-        "/api/v1/auth/password-reset-request",
-        json={"email": email}
-    )
+    # 1) request a reset
+    await async_client.post("/api/v1/auth/password-reset-request", json={"email": email})
     assert mock_mail.send_message.called
 
     last_call = mock_mail.send_message.call_args
@@ -205,11 +204,8 @@ async def test_password_reset_confirm_success(
     assert match is not None
     token_in_email = match.group(1)
 
-    # Step 2: confirm reset
-    payload = {
-        "new_password": "NewSecret123",
-        "confirmed_new_password": "NewSecret123"
-    }
+    # 2) confirm reset
+    payload = {"new_password": "NewSecret123", "confirmed_new_password": "NewSecret123"}
     resp = await async_client.post(
         f"/api/v1/auth/password-reset-confirm/{token_in_email}",
         json=payload
@@ -228,20 +224,15 @@ async def test_password_reset_confirm_mismatch_fake_token(
 ):
     """
     Because the route checks mismatch first,
-    we never decode the token if there's a mismatch.
-    => The route returns 400, ignoring the invalid token.
+    we never decode the token if there's a mismatch => 400.
     """
     fake_token = "fake-token-for-mismatch"
-    payload = {
-        "new_password": "MismatchOne",
-        "confirmed_new_password": "MismatchTwo"
-    }
+    payload = {"new_password": "MismatchOne", "confirmed_new_password": "MismatchTwo"}
 
     resp = await async_client.post(
         f"/api/v1/auth/password-reset-confirm/{fake_token}",
         json=payload
     )
-    # Mismatch => 400, we do NOT decode the token
     assert resp.status_code == 400, f"Expected 400 for mismatch, got {resp.status_code}"
 
 
@@ -263,11 +254,9 @@ async def test_password_reset_confirm_mismatch_real_token(
     await db_session.commit()
 
     r = await async_client.post(
-        "/api/v1/auth/password-reset-request",
-        json={"email": email}
+        "/api/v1/auth/password-reset-request", json={"email": email}
     )
     assert r.status_code == 200
-    # Ensure email was triggered
     assert mock_mail.send_message.called
 
     last_call = mock_mail.send_message.call_args
@@ -276,10 +265,7 @@ async def test_password_reset_confirm_mismatch_real_token(
     assert match is not None
     token_in_email = match.group(1)
 
-    payload = {
-        "new_password": "OnePassword",
-        "confirmed_new_password": "AnotherPassword"
-    }
+    payload = {"new_password": "OnePassword", "confirmed_new_password": "AnotherPassword"}
     r2 = await async_client.post(
         f"/api/v1/auth/password-reset-confirm/{token_in_email}",
         json=payload
@@ -294,14 +280,11 @@ async def test_password_reset_confirm_user_not_found(
         override_get_session, async_client, mock_mail
 ):
     """
-    If decode_url_safe_token fails *and* there's no mismatch,
-    THEN we get 500. But here, if user not found => 404.
+    If decode_url_safe_token fails and there's no mismatch => 500,
+    but if user is missing => 404 "User not found".
     """
     email = "doesnotexist@example.com"
-    await async_client.post(
-        "/api/v1/auth/password-reset-request",
-        json={"email": email}
-    )
+    await async_client.post("/api/v1/auth/password-reset-request", json={"email": email})
     assert mock_mail.send_message.called
 
     last_call = mock_mail.send_message.call_args
@@ -310,14 +293,10 @@ async def test_password_reset_confirm_user_not_found(
     assert match is not None
     token_in_email = match.group(1)
 
-    payload = {
-        "new_password": "SomePass123",
-        "confirmed_new_password": "SomePass123"
-    }
+    payload = {"new_password": "SomePass123", "confirmed_new_password": "SomePass123"}
     r2 = await async_client.post(
         f"/api/v1/auth/password-reset-confirm/{token_in_email}",
         json=payload
     )
-    # user not found => 404
     assert r2.status_code == 404
     assert "User not found" in r2.text
