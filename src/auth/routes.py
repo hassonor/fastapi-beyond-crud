@@ -12,8 +12,8 @@ from .utils import create_access_token, verify_password, create_url_safe_token, 
 from src.db.main import get_session
 from src.db.redis import token_blocklist_client
 from src.errors import UserAlreadyExists, UserNotFound, InvalidCredentials, InvalidToken
-from src.mail import mail, create_message
 from src.config import Config
+from src.celery_tasks import send_email_task
 
 auth_router = APIRouter()
 user_service = UserService()
@@ -25,12 +25,10 @@ REFRESH_TOKEN_EXPIRY = 2
 @auth_router.post('/send_mail')
 async def send_mail(emails: EmailModel):
     emails = emails.addresses
-
+    subject = "Welcome to our app"
     html = "<h1>Welcome to the app</h1>"
 
-    message = create_message(recipients=emails, subject="Welcome", body=html)
-
-    await mail.send_message(message)
+    send_email_task.delay(emails, subject, html)
 
     return {"message": "Email sent successfully."}
 
@@ -44,18 +42,17 @@ async def create_user_account(user_data: UserCreateModel, bg_tasks: BackgroundTa
         raise UserAlreadyExists()
     else:
         new_user = await user_service.create_user(user_data, session)
-
         token = create_url_safe_token({"email": email})
-
         link = f"http://{Config.DOMAIN}/api/v1/auth/verify/{token}"
 
-        html_message = f"""
+        emails = [email]
+        subject = "Verify your email"
+        html = f"""
         <h1>Verify your email</h1>
         <p>Please click the <a href="{link}">link</a> below to verify your email</p>
         """
-        message = create_message(recipients=[email], subject="Verify your email", body=html_message)
 
-        bg_tasks.add_task(mail.send_message, message)
+        send_email_task.delay(emails, subject, html)
 
         return {"message": "Account Created! Check email to verify your account", "user": new_user}
 
@@ -176,12 +173,17 @@ async def password_reset_request(email_data: PasswordResetRequestModel):
 
     link = f"http://{Config.DOMAIN}/api/v1/auth/password-reset-confirm/{token}"
 
+    subject = "Reset Your Password"
     html_message = f"""
       <h1>Reset your Password</h1>
       <p>Please click the <a href="{link}">link</a> below to Reset Your Password</p>
       """
-    message = create_message(recipients=[email], subject="Reset Your Password", body=html_message)
-    await mail.send_message(message)
+
+    send_email_task.delay(
+        recipients=[email],
+        subject=subject,
+        body=html_message
+    )
 
     return JSONResponse(
         content={"message": "Please check your email for instructions to reset your password"},

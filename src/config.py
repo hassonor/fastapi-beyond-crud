@@ -10,8 +10,7 @@ class Settings(BaseSettings):
     DB_HOST_TO_PG: str
     JWT_SECRET: str
     JWT_ALGORITHM: str
-    REDIS_HOST: str = "redis"
-    REDIS_PORT: int = 6379
+    REDIS_URL: str = "redis://redis:6379/0"
     DOMAIN: str
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
@@ -31,3 +30,7 @@ class Settings(BaseSettings):
 
 
 Config = Settings()
+
+broker_url = Config.REDIS_URL
+result_backend = Config.REDIS_URL
+broker_connection_retry_on_startup = True

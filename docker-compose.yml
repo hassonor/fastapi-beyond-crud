@@ -15,6 +15,21 @@ services:
     networks:
       - my_network
 
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    command: >
+      celery -A src.celery_tasks.c_app worker --loglevel=info
+    depends_on:
+      - redis
+      - book_db_server
+    env_file:
+      - .env
+    networks:
+      - my_network
+
   book_db_server:
     image: "postgres:14.0"
     container_name: book_db_server

@@ -1,6 +1,5 @@
 import logging
 import redis.asyncio as redis
-
 from src.config import Config
 
 logger = logging.getLogger(__name__)
@@ -14,26 +13,21 @@ class TokenBlocklistClient:
     def __init__(self, expiry: int = 3600):
         """
         :param expiry: Time-to-live in seconds for each JTI (default: 1 day).
-                      Increase or decrease as needed.
         """
         self.expiry = expiry
-        # Create an async Redis client
-        self.redis = redis.Redis(
-            host=Config.REDIS_HOST,
-            port=Config.REDIS_PORT,
-            db=0,
-            decode_responses=True
+        # Create an async Redis client from a single URL
+        self.redis = redis.from_url(
+            Config.REDIS_URL
         )
 
     async def connect(self) -> None:
         """
         Attempt a Redis PING to ensure connectivity.
-        Raises an exception if the connection fails.
         """
         try:
             pong = await self.redis.ping()
             logger.info("Redis PING response: %s", pong)
-            logger.info("Connected to Redis at %s:%s (db=0)", Config.REDIS_HOST, Config.REDIS_PORT)
+            logger.info("Connected to Redis at %s", Config.REDIS_URL)
         except Exception as e:
             logger.exception("Failed to connect to Redis: %s", e)
             raise
@@ -63,4 +57,5 @@ class TokenBlocklistClient:
         logger.info("Redis connection closed.")
 
 
+# Instantiate the client
 token_blocklist_client = TokenBlocklistClient()
