@@ -1,5 +1,3 @@
-# File: src/tests/unit/auth/test_auth_dependencies.py
-
 import pytest
 from unittest.mock import AsyncMock, patch
 from src.auth.dependencies import AccessTokenBearer, RefreshTokenBearer, RoleChecker

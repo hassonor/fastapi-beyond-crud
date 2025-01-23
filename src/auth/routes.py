@@ -196,6 +196,13 @@ async def reset_account_password(token: str, passwords: PasswordResetConfirmMode
         raise HTTPException(detail="Passwords do not match", status_code=status.HTTP_400_BAD_REQUEST)
 
     token_data = decode_url_safe_token(token)
+    if not token_data:
+        # If decode returned None, we can't proceed
+        return JSONResponse(
+            content={"message": "Error occurred during password reset"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    
     user_email = token_data.get("email")
 
     if user_email:
