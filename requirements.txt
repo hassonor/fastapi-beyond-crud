@@ -14,6 +14,7 @@ SQLAlchemy~=2.0.36
 uvicorn~=0.34.0
 redis~=5.2.1
 celery~=5.4.0
+flower~=2.0.1
 asgiref~=3.8.1
 
 
