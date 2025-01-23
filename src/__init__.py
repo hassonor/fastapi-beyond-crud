@@ -27,7 +27,12 @@ version = "v1"
 app = FastAPI(
     title="Or Hasson Books API",
     description="A REST API for a book review web service",
-    version=version
+    version=version,
+    docs_url=f"/api/{version}/docs",
+    redoc_url=f"/api/{version}/redoc",
+    contact={
+        "email": "hassonor@gmail.com"
+    }
 )
 
 register_all_errors(app)

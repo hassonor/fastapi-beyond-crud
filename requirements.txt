@@ -26,3 +26,4 @@ requests~=2.32.0
 faker~=33.3.0
 pytest-mock~=3.11.1
 trio~=0.28.0
+schemathesis~=3.39.7
